@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.DS_Store
+# dev-time geocoding cache for tools/curate-youtube.py
+tools/.geocode-cache.json
