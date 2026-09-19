@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "jmthomas00.vantage",
   "name": "Vantage",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Jordan Thomas (JMThomas00)",
   "license": "MIT",
   "description": "Live public webcams on a spinning globe, in nine map styles from LED dot-matrix to satellite and topographic. Click a pin for a thumbnail, click the thumbnail for a floating live view. Search, favorites, and a Random button. Ad-free: official agency feeds plus curated 24/7 YouTube cams played straight through mpv.",

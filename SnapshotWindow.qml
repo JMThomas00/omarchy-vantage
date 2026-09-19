@@ -103,6 +103,7 @@ FloatingWindow {
         id: imgA
         anchors.fill: parent
         fillMode: Image.PreserveAspectFit
+        sourceSize.width: 1920              // bound the decode of a remote image
         asynchronous: true
         cache: false
         opacity: win.aFront ? 1 : 0
@@ -116,6 +117,7 @@ FloatingWindow {
         id: imgB
         anchors.fill: parent
         fillMode: Image.PreserveAspectFit
+        sourceSize.width: 1920
         asynchronous: true
         cache: false
         opacity: win.aFront ? 0 : 1

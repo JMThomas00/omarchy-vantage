@@ -53,6 +53,23 @@ also need `yt-dlp` (`omarchy pkg add yt-dlp`); everything else works without it.
 
 The bar icon lands in the left section; move it with `omarchy bar move jmthomas00.vantage --section right`.
 
+## Update and uninstall
+
+```bash
+omarchy plugin update jmthomas00.vantage     # pull the latest release
+omarchy plugin remove jmthomas00.vantage     # uninstall
+```
+
+Vantage keeps everything it stores **outside** the plugin folder, so removing the plugin leaves it
+behind. To delete it all (favorites, settings, the camera catalog and the map-tile cache):
+
+```bash
+rm -rf ~/.local/state/vantage ~/.cache/vantage
+```
+
+It never edits your Hyprland or Omarchy config files: the only compositor change is a pair of
+runtime window rules for its own windows, which disappear when the shell restarts.
+
 ## Keys
 
 | Key | Action |
@@ -227,9 +244,14 @@ no ad-insertion path.
   http(s), so a hostile playlist cannot make mpv read local files. YouTube
   URLs must match an exact `watch?v=<11 chars>` shape. `mpv` runs with `--no-config`
   and `--` before the URL.
-- Network fetching happens in a bounded, supervised Python helper (deadline, process
-  group teardown, cleared environment), not in QML.
-- No credentials, no tokens, no telemetry. It only talks to the sources above.
+- Network fetching happens in Python helpers, never in QML: the catalog build runs under a
+  supervisor (deadline, process-group teardown, cleared environment) with a 40 MB response cap,
+  and the tile fetcher caps every tile at 1 MB with 15 s timeouts and only ever contacts two fixed
+  hosts (`gibs.earthdata.nasa.gov`, `s3.amazonaws.com`) using integer tile numbers. Remote images are
+  decoded at a bounded size, and all remote text is shown as plain text (never rich text).
+- Files it writes: `~/.local/state/vantage/` (settings, favorites, catalog) and `~/.cache/vantage/`
+  (map tiles, trimmed to about 400 MB). Nothing inside the plugin folder or your config.
+- No credentials, no tokens, no telemetry, no elevated privileges. It only talks to the sources above.
 
 ## Development
 
