@@ -68,7 +68,8 @@ rm -rf ~/.local/state/vantage ~/.cache/vantage
 ```
 
 It never edits your Hyprland or Omarchy config files: the only compositor change is a pair of
-runtime window rules for its own windows, which disappear when the shell restarts.
+runtime window rules for its own windows, added with `hyprctl` and never written to disk (Hyprland
+drops them on its next config reload, and Vantage re-adds them).
 
 ## Keys
 
