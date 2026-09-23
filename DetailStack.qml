@@ -29,6 +29,12 @@ Item {
   readonly property var p1: root.front === 0 ? pa : pb          // current patch
   readonly property var p2: root.front === 0 ? pb : pa          // the one before it
 
+  // Fires once per style activation when the bounded tile fetcher (bin/tiles.py) can't run.
+  // Detail tiles just stop arriving in that case (fail closed) — the whole-planet texture still
+  // shows underneath — but Globe surfaces it as a one-time toast rather than staying silent.
+  signal helperFailed()
+  property bool _reportedFailed: false
+
   // finest tile zoom the source has, the coarsest worth fetching (the whole-planet texture is
   // already this sharp below it), and how much coarser than 1 texel/px is fine (elevation is smooth)
   readonly property int maxZ: root.kind === "sat" ? 12 : 11
@@ -38,9 +44,18 @@ Item {
   DetailLayer { id: pa; kind: root.kind; pluginDir: root.pluginDir }
   DetailLayer { id: pb; kind: root.kind; pluginDir: root.pluginDir }
 
-  onKindChanged: { root.settled = (root.kind === ""); root.request() }
-  Connections { target: pa; function onFetchDone() { root._fetched(pa) } }
-  Connections { target: pb; function onFetchDone() { root._fetched(pb) } }
+  onKindChanged: { root.settled = (root.kind === ""); root._reportedFailed = false; root.request() }
+  Connections {
+    target: pa
+    function onFetchDone() { root._fetched(pa) }
+    function onHelperFailed() { root._failed() }
+  }
+  Connections {
+    target: pb
+    function onFetchDone() { root._fetched(pb) }
+    function onHelperFailed() { root._failed() }
+  }
+  function _failed() { if (root._reportedFailed) return; root._reportedFailed = true; root.helperFailed() }
   function _fetched(layer) { if (layer === root.p1) settleTimer.restart() }
   Timer { id: settleTimer; interval: 480; repeat: false; onTriggered: root.settled = true }      // decode + the 260 ms tile fade-in
   onProjChanged: root.request()

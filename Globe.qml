@@ -62,6 +62,7 @@ Item {
   signal moved()
   signal userInteracted()
   signal imageryFailed(string why)
+  signal detailUnavailable(string why)
 
   // ---- satellite / topo imagery: a whole-planet texture drawn by a GPU shader
   // beneath the `scene` canvas (see shaders/imagery.frag). The texture is loaded only
@@ -821,6 +822,7 @@ Item {
     ppd: root.ppd
     globeR: root.globeR
     onSettledChanged: root._maybeSwitch()
+    onHelperFailed: root.detailUnavailable("satellite detail")
   }
   DetailStack {
     id: elevStack
@@ -834,6 +836,7 @@ Item {
     ppd: root.ppd
     globeR: root.globeR
     onSettledChanged: root._maybeSwitch()
+    onHelperFailed: root.detailUnavailable(root.shownStyle === "contour" ? "contour detail" : "topo detail")
   }
   readonly property var activeStack: root.shownStyle === "satellite" ? satStack : elevStack
 

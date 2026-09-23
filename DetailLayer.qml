@@ -12,8 +12,10 @@ import Quickshell.Io
 //   kind "elev"  AWS Terrain Tiles, Terrarium-encoded elevation (open data)
 //
 // Tiles are fetched by bin/tiles.py (24 in parallel, into ~/.cache/vantage/tiles, so revisits are
-// instant and work offline); if Python cannot run, the images load straight from the servers instead.
-// Only integer tile numbers go into a URL, and only these two hosts are ever contacted.
+// instant and work offline), which is the only thing that ever puts a remote URL in front of QML:
+// it enforces the host allowlist, a byte cap and a timeout per tile. If it cannot run, this layer
+// fails closed (no tile loads, so whatever lies beneath keeps showing) rather than letting the
+// Image element fetch straight from the server with none of those limits.
 Item {
   id: root
 
@@ -34,20 +36,18 @@ Item {
 
   // disk-cache state
   property var ready: ({})                        // "z:x:y" -> path relative to the cache root
-  property bool direct: false                     // fetcher unavailable: images load from the servers
+  property bool failed: false                      // fetcher unavailable this load: no tiles will arrive (fail closed, not a direct fetch)
   property var _proc: null
   property int _lines: 0
   readonly property string cacheBase: "file://" + (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/vantage/tiles/"
 
   signal fetchDone()                              // the helper finished (every tile is on disk, or known to be missing)
+  signal helperFailed()                            // the bounded fetcher could not run at all; no direct-network fallback is used
 
   onKindChanged: root.clear()
 
-  function _url(z, x, y) {
-    if (root.kind === "sat")
-      return "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual/default/2000-12-01/GoogleMapsCompatible_Level12/" + z + "/" + y + "/" + x + ".jpg"
-    return "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/" + z + "/" + x + "/" + y + ".png"
-  }
+  // Tile URLs are built and fetched only inside bin/tiles.py (see SOURCES there); this layer never
+  // constructs one, so there is nothing here for an Image element to load directly from the network.
 
   function _stop() {
     if (root._proc) { var p = root._proc; root._proc = null; p.signal(15); p.destroy() }
@@ -66,7 +66,7 @@ Item {
   function _onExit(p, code) {
     if (p !== root._proc) { p.destroy(); return }
     root._proc = null
-    if (code !== 0 && root._lines === 0) root.direct = true         // could not run: fall back to direct downloads
+    if (code !== 0 && root._lines === 0) { root.failed = true; root.helperFailed() }   // could not run: fail closed, no tiles this load
     p.destroy()
     root.fetchDone()
   }
@@ -89,14 +89,13 @@ Item {
       for (var c = 0; c < plan.cols; c++) {
         var tx = (((plan.x0 + c) % n) + n) % n
         var dx = c + 0.5 - fx, dy = r + 0.5 - fy
-        list.push({ px: c * 256, py: r * 256, d: dx * dx + dy * dy, key: plan.z + ":" + tx + ":" + (plan.y0 + r),
-                    url: root._url(plan.z, tx, plan.y0 + r) })
+        list.push({ px: c * 256, py: r * 256, d: dx * dx + dy * dy, key: plan.z + ":" + tx + ":" + (plan.y0 + r) })
       }
     }
     list.sort(function (a, b) { return a.d - b.d })
     root._stop()
     root.ready = ({})
-    root.direct = false
+    root.failed = false
     root._lines = 0
     root.tileZ = plan.z
     root.x0 = plan.x0
@@ -106,7 +105,7 @@ Item {
     root.box = Qt.vector4d((((plan.x0 % n) + n) % n) / n, plan.y0 / n, plan.cols / n, plan.rows / n)
     root.tiles = list
     root.on = true
-    if (root.pluginDir === "") { root.direct = true; root.fetchDone(); return }
+    if (root.pluginDir === "") { root.failed = true; root.helperFailed(); root.fetchDone(); return }
     root._proc = procComp.createObject(root, {
       command: ["/usr/bin/python3", root.pluginDir + "/bin/tiles.py", root.kind].concat(list.map(function (t) { return t.key }))
     })
@@ -147,7 +146,7 @@ Item {
         y: modelData.py
         width: 256
         height: 256
-        source: root.direct ? modelData.url : (root.ready[modelData.key] ? root.cacheBase + root.ready[modelData.key] : "")
+        source: root.ready[modelData.key] ? root.cacheBase + root.ready[modelData.key] : ""      // always a local cache path from tiles.py, or empty (transparent) — never a remote URL
         asynchronous: true
         cache: true
         smooth: true

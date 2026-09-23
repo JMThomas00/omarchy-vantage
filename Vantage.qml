@@ -466,6 +466,7 @@ Item {
           active: panel.visible
           onCamPicked: function (index) { root.selectCam(catalog.cams[index], "map") }
           onImageryFailed: function (why) { root.showToast("Map imagery unavailable (" + why + "), using DOTS") }
+          onDetailUnavailable: function (why) { root.showToast(why.toUpperCase() + " tiles unavailable (helper could not run); showing base resolution") }
           onMoved: if (root.tab === "world" && search.text === "") rowsTimer.restart()
           onUserInteracted: if (!search.activeFocus) keys.forceActiveFocus()
         }
