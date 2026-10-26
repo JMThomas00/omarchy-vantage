@@ -1,1 +1,20 @@
 singleton Vt 1.0 Vt.qml
+BarWidget 1.0 BarWidget.qml
+BracketFrame 1.0 BracketFrame.qml
+CamRow 1.0 CamRow.qml
+CatalogStore 1.0 CatalogStore.qml
+DetailLayer 1.0 DetailLayer.qml
+DetailStack 1.0 DetailStack.qml
+Globe 1.0 Globe.qml
+InfoPanel 1.0 InfoPanel.qml
+Logo 1.0 Logo.qml
+PreviewCard 1.0 PreviewCard.qml
+Sidebar 1.0 Sidebar.qml
+SnapshotWindow 1.0 SnapshotWindow.qml
+StateStore 1.0 StateStore.qml
+SupervisedProcess 1.0 SupervisedProcess.qml
+ThemePalette 1.0 ThemePalette.qml
+Vantage 1.0 Vantage.qml
+Viewer 1.0 Viewer.qml
+VtButton 1.0 VtButton.qml
+VtChip 1.0 VtChip.qml
