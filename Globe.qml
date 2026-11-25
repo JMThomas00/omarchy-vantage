@@ -253,6 +253,7 @@ Item {
   }
 
   function zoomBy(factor, sx, sy) {
+    if (!(factor > 0) || Math.abs(factor - 1) < 1e-5) return
     if (root._flying) { flyAnim.stop(); root._flying = false }     // the user took over: stop the fly-to
     var before = null
     if (root.proj === "flat" && sx !== undefined) before = Geo.screenToLatLon(root.view(), sx, sy)
@@ -1056,10 +1057,56 @@ Item {
     }
   }
 
+  // A trackpad pinch arrives as a native zoom gesture (Wayland pointer-gestures), not as a
+  // wheel event. Without this handler those events are dropped, and only the few scroll
+  // frames libinput emits before it decides the motion is a pinch get through.
+  PinchHandler {
+    id: pinch
+    target: null
+    rotationAxis.enabled: false
+    xAxis.enabled: false
+    yAxis.enabled: false
+    onActiveChanged: {
+      if (active) {
+        kinetic.running = false
+        flyAnim.stop()
+        root._flying = false
+        root.interacting = true
+        root.userInteracted()
+      } else {
+        zoomIdle.restart()
+      }
+    }
+    onScaleChanged: function (delta) {
+      root.zoomBy(delta, centroid.position.x, centroid.position.y)
+    }
+  }
+
+  // Mouse notches are angleDelta (±120). A touchpad also fills angleDelta, but from the
+  // discrete axis (steps of 120) or from pixels×12, so feeding it to the mouse curve makes
+  // one finger-flick a huge zoom jump. Continuous scroll carries a phase and a pixelDelta.
   WheelHandler {
     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
     onWheel: function (event) {
-      root.zoomBy(Math.exp(event.angleDelta.y / 720), point.position.x, point.position.y)
+      if (pinch.active) return
+      var continuous = event.phase !== Qt.NoScrollPhase
+      var dy = continuous
+        ? (event.pixelDelta.y || event.angleDelta.y / 12)
+        : event.angleDelta.y
+      if (!dy) return
+      // Coarse land while the fingers are down: a fine canvas repaint per event cannot
+      // keep up with a touchpad and the picture steps instead of tracking.
+      if (!drag.active) { root.interacting = true; zoomIdle.restart() }
+      root.zoomBy(Math.exp(dy / (continuous ? 240 : 720)), event.x, event.y)
+    }
+  }
+  Timer {
+    id: zoomIdle
+    interval: 140
+    onTriggered: {
+      if (drag.active || pinch.active) return
+      root.interacting = false
+      root._touchScene()
     }
   }
 
