@@ -1078,13 +1078,15 @@ Item {
       }
     }
     onScaleChanged: function (delta) {
-      root.zoomBy(delta, centroid.position.x, centroid.position.y)
+      // The gesture scale is 1:1 with the fingers. Square it in log space so the
+      // same pinch travels about twice as far, in or out.
+      root.zoomBy(Math.pow(delta, 2), centroid.position.x, centroid.position.y)
     }
   }
 
-  // Mouse notches are angleDelta (±120). A touchpad also fills angleDelta, but from the
-  // discrete axis (steps of 120) or from pixels×12, so feeding it to the mouse curve makes
-  // one finger-flick a huge zoom jump. Continuous scroll carries a phase and a pixelDelta.
+  // Mouse notches are angleDelta (±120), one notch = exp(120/720). On a touchpad Qt
+  // derives that angle as pixels×12, so the same gain is exp(pixels/60). Use the pixel
+  // delta when the scroll is continuous: same speed, without the 120-step jumps.
   WheelHandler {
     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
     onWheel: function (event) {
@@ -1097,7 +1099,7 @@ Item {
       // Coarse land while the fingers are down: a fine canvas repaint per event cannot
       // keep up with a touchpad and the picture steps instead of tracking.
       if (!drag.active) { root.interacting = true; zoomIdle.restart() }
-      root.zoomBy(Math.exp(dy / (continuous ? 240 : 720)), event.x, event.y)
+      root.zoomBy(Math.exp(dy / (continuous ? 60 : 720)), event.x, event.y)
     }
   }
   Timer {
